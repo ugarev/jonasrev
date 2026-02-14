@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JonasRev | Study Helper</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'media', 
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a' },
+                        calm: { 100: '#d1fae5', 500: '#10b981', 600: '#059669' }
+                    },
+                    animation: {
+                        'breathe': 'breathe 19s infinite ease-in-out', 
+                        'pop': 'pop 0.2s ease-out forwards',
+                    },
+                    keyframes: {
+                        breathe: {
+                            '0%, 21%': { transform: 'scale(1.5)', opacity: '1' },
+                            '21%, 58%': { transform: 'scale(1.5)', opacity: '0.8' },
+                            '58%, 100%': { transform: 'scale(1)', opacity: '0.5' }
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(0.9)' },
+                            '100%': { transform: 'scale(0.95)', opacity: '0.6' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .dark ::-webkit-scrollbar-thumb { background-color: #475569; }
+
+        /* Animation & Layout */
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .progress-ring__circle { transition: stroke-dashoffset 0.35s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .scroll-container { -webkit-overflow-scrolling: touch; }
+        
+        /* Modal Animation */
+        .modal-enter { animation: modalIn 0.2s ease-out forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* Bubble Wrap */
+        .bubble { cursor: pointer; transition: all 0.1s; box-shadow: inset -2px -2px 4px rgba(0,0,0,0.1), inset 2px 2px 4px rgba(255,255,255,0.5); -webkit-tap-highlight-color: transparent; }
+        .dark .bubble { box-shadow: inset -2px -2px 4px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.1); }
+        .bubble.popped { animation: pop 0.1s forwards; box-shadow: inset 1px 1px 3px rgba(0,0,0,0.2); }
+
+        /* Memory Game */
+        .memory-card { perspective: 1000px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .memory-card-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.4s; transform-style: preserve-3d; }
+        .memory-card.flipped .memory-card-inner { transform: rotateY(180deg); }
+        .memory-card-front, .memory-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; }
+        .memory-card-back { transform: rotateY(180deg); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300 h-[100dvh] flex flex-col font-sans overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm z-10 flex-none">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-student text-2xl text-brand-600 dark:text-brand-500"></i>
+                <h1 class="text-xl font-bold tracking-tight">JonasRev</h1>
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                <span id="clock-display">00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto scroll-container relative w-full max-w-3xl mx-auto p-4 pb-32">
+        
+        <!-- DASHBOARD / TIMER TAB -->
+        <section id="tab-timer" class="tab-content active space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700">
+                    <div id="progress-bar-linear" class="h-full bg-brand-500 transition-all duration-1000" style="width: 100%"></div>
+                </div>
+                <div class="mt-4 mb-2">
+                    <span id="timer-status" class="uppercase tracking-widest text-xs font-bold text-gray-400 dark:text-gray-500">Focus Time</span>
+                </div>
+                <div class="relative mb-6 w-full flex justify-center">
+                    <div class="relative w-full max-w-[16rem] aspect-square">
+                        <svg class="w-full h-full" viewBox="0 0 120 120">
+                            <circle class="text-gray-200 dark:text-gray-700" stroke-width="6" stroke="currentColor" fill="transparent" r="54" cx="60" cy="60" />
+                            <circle id="progress-ring" class="text-brand-500 progress-ring__circle" stroke-width="6" stroke-linecap="round" stroke="currentColor" fill="transparent" r="54" cx="60" cy="60" />
+                        </svg>
+                        <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                            <button onclick="openCustomModal()" id="timer-display-btn" class="text-5xl sm:text-6xl font-mono font-bold tracking-tighter hover:text-brand-600 transition-colors">25:00</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="toggleTimer()" id="start-btn" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-xl font-medium transition-transform active:scale-95 flex items-center gap-2"><i class="ph-bold ph-play"></i> Start</button>
+                    <button onclick="resetTimer()" class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-3 rounded-xl transition-colors"><i class="ph-bold ph-arrow-counter-clockwise"></i></button>
+                </div>
+                <div class="mt-8 grid grid-cols-4 gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg w-full">
+                    <button onclick="setMode('pomodoro')" class="mode-btn px-2 py-2 text-xs font-medium rounded-md transition-all bg-white dark:bg-gray-600 shadow-sm text-brand-600">Pomodoro</button>
+                    <button onclick="setMode('short')" class="mode-btn px-2 py-2 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">Short</button>
+                    <button onclick="setMode('long')" class="mode-btn px-2 py-2 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all">Long</button>
+                    <button onclick="openCustomModal()" class="mode-btn px-2 py-2 text-xs font-medium rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all"><i class="ph-bold ph-pencil-simple"></i> Custom</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="text-gray-400 text-xs font-semibold uppercase">Sessions Today</div>
+                    <div class="text-3xl font-bold mt-1" id="session-count">0</div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div class="text-gray-400 text-xs font-semibold uppercase">Est. Minutes</div>
+                    <div class="text-3xl font-bold mt-1" id="minutes-count">0</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PLANNER TAB -->
+        <section id="tab-planner" class="tab-content space-y-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-2xl font-bold">Weekly Schedule</h2>
+                <div class="flex items-center gap-3">
+                    <button onclick="requestNotifyPermission()" id="notify-btn" class="text-gray-400 hover:text-brand-500 transition-colors"><i class="ph-fill ph-bell-slash text-xl" id="notify-icon"></i></button>
+                    <button onclick="clearPlanner()" class="text-xs text-red-500 hover:underline">Clear All</button>
+                </div>
+            </div>
+            <div class="flex overflow-x-auto gap-2 pb-2 scrollbar-hide" id="day-selector"></div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 min-h-[300px] p-4">
+                <div id="schedule-list" class="space-y-3"></div>
+                <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <h3 class="text-sm font-semibold mb-3 text-gray-500">Add to Schedule</h3>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex gap-2 w-full">
+                            <input type="time" id="plan-time" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 shrink-0">
+                            <input type="text" id="plan-subject" placeholder="Subject / Activity" class="flex-1 min-w-0 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <input type="text" id="plan-room" placeholder="Room / Location / Link (Optional)" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <button onclick="addToSchedule()" class="bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors w-full">Add Class/Event</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TASKS TAB -->
+        <section id="tab-tasks" class="tab-content space-y-4">
+            <h2 class="text-2xl font-bold">Tasks & Assignments</h2>
+            <div class="flex gap-2 w-full">
+                <input type="text" id="task-input" placeholder="What needs to be done?" class="flex-1 min-w-0 bg-white dark:bg-gray-800 border-none shadow-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:text-white" onkeypress="if(event.key === 'Enter') addTask()">
+                <button onclick="addTask()" class="flex-none bg-brand-600 text-white w-12 rounded-xl hover:bg-brand-700 flex items-center justify-center shadow-sm"><i class="ph-bold ph-plus text-xl"></i></button>
+            </div>
+            <div id="task-list" class="space-y-2 pb-20"></div>
+        </section>
+
+        <!-- NOTES TAB (SIMPLE TEXT AREA) -->
+        <section id="tab-notes" class="tab-content h-full flex flex-col">
+            <div class="flex justify-between items-center mb-4 mt-6">
+                <h2 class="text-2xl font-bold">Quick Notes</h2>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-green-500 hidden" id="save-indicator">Saved</span>
+                </div>
+            </div>
+            <div class="flex-1 relative">
+                <textarea id="notepad" 
+                    class="w-full h-full min-h-[60vh] p-4 rounded-2xl bg-yellow-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-none resize-none focus:ring-2 focus:ring-brand-500 leading-relaxed shadow-sm font-sans"
+                    placeholder="Type your ideas, formulas, or draft essays here... Auto-saves as you type."></textarea>
+            </div>
+        </section>
+
+        <!-- RELAX TAB -->
+        <section id="tab-relax" class="tab-content space-y-6 pb-20">
+            <h2 class="text-2xl font-bold mb-4">Chill Zone</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-sm relative overflow-hidden">
+                <div class="absolute top-2 right-2 text-xs text-gray-400">4-7-8 Breathing</div>
+                <div id="breathe-circle" class="w-32 h-32 bg-calm-100 dark:bg-calm-600 rounded-full flex items-center justify-center mb-4 transition-all duration-1000 relative">
+                    <span id="breathe-text" class="text-calm-600 dark:text-white font-bold text-lg z-10">Tap to Start</span>
+                    <div id="breathe-ring" class="absolute w-full h-full bg-calm-500 dark:bg-calm-500 rounded-full opacity-30"></div>
+                </div>
+                <button onclick="toggleBreathing()" id="breathe-btn" class="bg-calm-500 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-calm-600 transition">Start Breathing</button>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700 dark:text-gray-200">Bubble Pop</h3>
+                    <button onclick="resetBubbles()" class="text-xs text-brand-500 hover:underline"><i class="ph-bold ph-arrow-counter-clockwise"></i> Reset</button>
+                </div>
+                <div id="bubble-grid" class="grid grid-cols-6 gap-2 sm:gap-3"></div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700 dark:text-gray-200">Memory Match</h3>
+                    <button onclick="initMemoryGame()" class="text-xs text-brand-500 hover:underline">New Game</button>
+                </div>
+                <div id="memory-grid" class="grid grid-cols-4 gap-2 h-64"></div>
+                <div id="memory-status" class="text-center mt-2 text-sm text-gray-500">Find the pairs!</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Navigation -->
+    <nav class="flex-none bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-20 pb-safe">
+        <div class="max-w-3xl mx-auto flex justify-between items-center p-2">
+            <button onclick="switchTab('timer')" class="nav-btn active flex-1 flex flex-col items-center p-2 rounded-lg text-gray-400 dark:text-gray-500 transition-colors" data-target="tab-timer"><i class="ph-fill ph-timer text-2xl mb-1"></i><span class="text-[10px] font-medium">Focus</span></button>
+            <button onclick="switchTab('planner')" class="nav-btn flex-1 flex flex-col items-center p-2 rounded-lg text-gray-400 dark:text-gray-500 transition-colors" data-target="tab-planner"><i class="ph-fill ph-calendar-blank text-2xl mb-1"></i><span class="text-[10px] font-medium">Planner</span></button>
+            <button onclick="switchTab('tasks')" class="nav-btn flex-1 flex flex-col items-center p-2 rounded-lg text-gray-400 dark:text-gray-500 transition-colors" data-target="tab-tasks"><i class="ph-fill ph-check-square-offset text-2xl mb-1"></i><span class="text-[10px] font-medium">Tasks</span></button>
+            <button onclick="switchTab('notes')" class="nav-btn flex-1 flex flex-col items-center p-2 rounded-lg text-gray-400 dark:text-gray-500 transition-colors" data-target="tab-notes"><i class="ph-fill ph-notepad text-2xl mb-1"></i><span class="text-[10px] font-medium">Notes</span></button>
+            <button onclick="switchTab('relax')" class="nav-btn flex-1 flex flex-col items-center p-2 rounded-lg text-gray-400 dark:text-gray-500 transition-colors" data-target="tab-relax"><i class="ph-fill ph-smiley text-2xl mb-1"></i><span class="text-[10px] font-medium">Relax</span></button>
+        </div>
+    </nav>
+
+    <!-- Modals -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl w-full max-w-sm modal-enter">
+            <h3 class="text-lg font-bold mb-4 dark:text-white">Custom Duration</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Enter focus duration in minutes:</p>
+            <input type="number" id="custom-time-input" value="45" class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-brand-500 mb-6 dark:text-white" min="1" max="180">
+            <div class="flex gap-3">
+                <button onclick="closeCustomModal()" class="flex-1 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium">Cancel</button>
+                <button onclick="applyCustomTime()" class="flex-1 px-4 py-2 rounded-lg bg-brand-600 text-white hover:bg-brand-700 font-medium">Set Timer</button>
+            </div>
+        </div>
+    </div>
+
+    <style> .nav-btn.active { color: #2563eb; } .dark .nav-btn.active { color: #3b82f6; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); } </style>
+
+    <!-- APP LOGIC -->
+    <script>
+        const storage = { get: (key, def) => { const item = localStorage.getItem('jonasrev_' + key); return item ? JSON.parse(item) : def; }, set: (key, val) => { localStorage.setItem('jonasrev_' + key, JSON.stringify(val)); } };
+        function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tabName}`).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.target === `tab-${tabName}`); }); if(tabName === 'relax' && document.getElementById('bubble-grid').children.length === 0) { initBubbles(); initMemoryGame(); } }
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type='sine', duration=0.1, vol=0.1) { if (audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.type = type; osc.frequency.value = freq; gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration); osc.start(); osc.stop(audioCtx.currentTime + duration); }
+        function playPop() { if (audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.8, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.start(); osc.stop(audioCtx.currentTime + 0.1); }
+        function playAlarm() { if (audioCtx.state === 'suspended') audioCtx.resume(); const now = audioCtx.currentTime; [880, 880, 1760].forEach((freq, i) => { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); osc.frequency.value = freq; gain.gain.value = 0.1; osc.start(now + (i * 0.3)); osc.stop(now + (i * 0.3) + 0.2); }); }
+        
+        let breathingInterval, isBreathing = false;
+        function toggleBreathing() { const circle = document.getElementById('breathe-ring'), text = document.getElementById('breathe-text'), btn = document.getElementById('breathe-btn'); if (isBreathing) { circle.classList.remove('animate-breathe'); text.textContent = 'Tap to Start'; btn.textContent = 'Start Breathing'; clearInterval(breathingInterval); isBreathing = false; } else { text.textContent = 'Inhale...'; circle.classList.add('animate-breathe'); btn.textContent = 'Stop'; isBreathing = true; const cycle = () => { setTimeout(() => text.textContent = 'Hold...', 4000); setTimeout(() => text.textContent = 'Exhale...', 11000); setTimeout(() => text.textContent = 'Inhale...', 19000); }; cycle(); breathingInterval = setInterval(cycle, 19000); } }
+        function initBubbles() { const grid = document.getElementById('bubble-grid'); grid.innerHTML = ''; for(let i=0; i<30; i++) { const b = document.createElement('div'); b.className = 'bubble bg-brand-200 dark:bg-brand-800 rounded-full w-full pt-[100%] relative'; b.onclick = function() { if(!this.classList.contains('popped')) { this.classList.add('popped'); this.style.setProperty('--pop-color', 'var(--tw-bg-opacity, 1) #e2e8f0'); playPop(); } }; grid.appendChild(b); } }
+        function resetBubbles() { document.querySelectorAll('.bubble').forEach(b => { b.classList.remove('popped'); }); playTone(600, 'sine', 0.2); }
+        const icons = ['ph-cat', 'ph-dog', 'ph-bird', 'ph-fish', 'ph-bug', 'ph-butterfly', 'ph-paw-print', 'ph-rabbit']; let cards = [], flippedCards = [], matchedPairs = 0;
+        function initMemoryGame() { const grid = document.getElementById('memory-grid'); grid.innerHTML = ''; matchedPairs = 0; flippedCards = []; document.getElementById('memory-status').textContent = 'Find the pairs!'; let gameIcons = [...icons.slice(0, 8), ...icons.slice(0, 8)]; gameIcons.sort(() => Math.random() - 0.5); gameIcons.forEach((icon, index) => { const card = document.createElement('div'); card.className = 'memory-card w-full h-full'; card.dataset.icon = icon; card.innerHTML = `<div class="memory-card-inner"><div class="memory-card-front bg-brand-500 text-white shadow-md"><i class="ph-bold ph-question text-2xl"></i></div><div class="memory-card-back bg-white dark:bg-gray-700 border-2 border-brand-500 text-brand-500 shadow-md"><i class="ph-fill ${icon} text-2xl"></i></div></div>`; card.onclick = () => flipCard(card); grid.appendChild(card); }); }
+        function flipCard(card) { if (flippedCards.length >= 2 || card.classList.contains('flipped') || card.classList.contains('matched')) return; card.classList.add('flipped'); playTone(400, 'sine', 0.05); flippedCards.push(card); if (flippedCards.length === 2) checkMatch(); }
+        function checkMatch() { const [c1, c2] = flippedCards; if (c1.dataset.icon === c2.dataset.icon) { c1.classList.add('matched'); c2.classList.add('matched'); playTone(800, 'sine', 0.1); playTone(1200, 'sine', 0.1); matchedPairs++; flippedCards = []; if (matchedPairs === 8) document.getElementById('memory-status').textContent = 'You Win! 🎉'; } else { setTimeout(() => { c1.classList.remove('flipped'); c2.classList.remove('flipped'); flippedCards = []; }, 1000); } }
+
+        function updateClock() { const now = new Date(); document.getElementById('clock-display').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); if(now.getSeconds() % 10 === 0) checkScheduleForNotifications(now); } setInterval(updateClock, 1000); updateClock();
+        function requestNotifyPermission() { if (!("Notification" in window)) return; Notification.requestPermission().then(permission => { if(permission === 'granted') new Notification("Notifications Enabled", { body: "You will be notified 5 minutes before scheduled events." }); }); }
+        let notifiedEvents = new Set();
+        function checkScheduleForNotifications(now) { if(Notification.permission !== "granted") return; const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; const todayName = days[now.getDay()]; const schedule = getSchedule(); const todaysEvents = schedule[todayName] || []; const currentMinutes = now.getHours() * 60 + now.getMinutes(); todaysEvents.forEach(event => { const [h, m] = event.time.split(':').map(Number); const eventMinutes = h * 60 + m; if (eventMinutes - currentMinutes === 5 && !notifiedEvents.has(`${todayName}-${event.time}-${event.subject}`)) { new Notification(`Upcoming: ${event.subject}`, { body: `Starts in 5 minutes at ${event.time}`, icon: 'https://cdn-icons-png.flaticon.com/512/3209/3209965.png' }); playTone(880); notifiedEvents.add(`${todayName}-${event.time}-${event.subject}`); } }); }
+
+        let timerInterval, timeLeft, isTimerRunning = false, currentMode = 'pomodoro', totalTime; const MODES = { 'pomodoro': 25, 'short': 5, 'long': 15 };
+        function setProgress(percent) { const circle = document.querySelector('#progress-ring'); const circumference = circle.r.baseVal.value * 2 * Math.PI; circle.style.strokeDasharray = `${circumference} ${circumference}`; circle.style.strokeDashoffset = circumference - (percent / 100) * circumference; document.getElementById('progress-bar-linear').style.width = `${percent}%`; }
+        function formatTime(s) { return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
+        function setMode(mode) { isTimerRunning = false; clearInterval(timerInterval); currentMode = mode; if(MODES[mode]) { timeLeft = MODES[mode] * 60; totalTime = timeLeft; } document.querySelectorAll('.mode-btn').forEach(btn => { btn.classList.remove('bg-white', 'dark:bg-gray-600', 'shadow-sm', 'text-brand-600'); btn.classList.add('text-gray-500', 'dark:text-gray-400'); }); document.getElementById('start-btn').innerHTML = '<i class="ph-bold ph-play"></i> Start'; document.getElementById('start-btn').classList.replace('bg-orange-500', 'bg-brand-600'); updateTimerDisplay(); }
+        function openCustomModal() { document.getElementById('custom-modal').classList.remove('hidden'); } function closeCustomModal() { document.getElementById('custom-modal').classList.add('hidden'); }
+        function applyCustomTime() { const mins = parseInt(document.getElementById('custom-time-input').value); if (mins > 0) { timeLeft = mins * 60; totalTime = timeLeft; setMode('custom'); closeCustomModal(); } }
+        function updateTimerDisplay() { document.getElementById('timer-display-btn').textContent = formatTime(timeLeft); setProgress(totalTime > 0 ? (timeLeft / totalTime) * 100 : 100); document.title = `${formatTime(timeLeft)} - JonasRev`; }
+        function toggleTimer() { if (isTimerRunning) { isTimerRunning = false; clearInterval(timerInterval); document.getElementById('start-btn').innerHTML = '<i class="ph-bold ph-play"></i> Start'; document.getElementById('start-btn').classList.replace('bg-orange-500', 'bg-brand-600'); } else { if (audioCtx.state === 'suspended') audioCtx.resume(); isTimerRunning = true; document.getElementById('start-btn').innerHTML = '<i class="ph-bold ph-pause"></i> Pause'; document.getElementById('start-btn').classList.replace('bg-brand-600', 'bg-orange-500'); timerInterval = setInterval(() => { timeLeft--; updateTimerDisplay(); if (timeLeft <= 0) { clearInterval(timerInterval); playAlarm(); if (Notification.permission === "granted") new Notification("Timer Finished!"); isTimerRunning = false; if (currentMode === 'pomodoro' || currentMode === 'custom') { storage.set('session_count', storage.get('session_count', 0) + 1); storage.set('mins_count', storage.get('mins_count', 0) + Math.floor(totalTime / 60)); renderStats(); } timeLeft = totalTime; updateTimerDisplay(); document.getElementById('start-btn').innerHTML = '<i class="ph-bold ph-play"></i> Start'; document.getElementById('start-btn').classList.replace('bg-orange-500', 'bg-brand-600'); } }, 1000); } }
+        function resetTimer() { isTimerRunning = false; clearInterval(timerInterval); if(currentMode === 'custom') timeLeft = totalTime; else timeLeft = MODES[currentMode] * 60; updateTimerDisplay(); document.getElementById('start-btn').innerHTML = '<i class="ph-bold ph-play"></i> Start'; document.getElementById('start-btn').classList.replace('bg-orange-500', 'bg-brand-600'); }
+        function renderStats() { document.getElementById('session-count').textContent = storage.get('session_count', 0); document.getElementById('minutes-count').textContent = storage.get('mins_count', 0); }
+
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; let currentDay = days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]; 
+        function renderDaySelector() { const c = document.getElementById('day-selector'); c.innerHTML = ''; days.forEach(d => { const b = document.createElement('button'); b.className = `min-w-[60px] py-2 rounded-xl text-sm font-semibold transition-colors ${d === currentDay ? 'bg-brand-600 text-white shadow-md' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`; b.textContent = d; b.onclick = () => { currentDay = d; renderDaySelector(); renderSchedule(); }; c.appendChild(b); }); }
+        function getSchedule() { return storage.get('schedule', {}); }
+        function renderSchedule() { const l = document.getElementById('schedule-list'); const s = getSchedule(); const i = s[currentDay] || []; i.sort((a, b) => a.time.localeCompare(b.time)); l.innerHTML = ''; if (i.length === 0) { l.innerHTML = `<div class="text-center py-8 text-gray-400 dark:text-gray-600"><i class="ph-duotone ph-coffee text-4xl mb-2"></i><p class="text-sm">No plans for ${currentDay}</p></div>`; return; } i.forEach((item, idx) => { const d = document.createElement('div'); d.className = 'flex items-start gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700 group'; d.innerHTML = `<div class="font-mono font-bold text-brand-600 dark:text-brand-400 pt-1">${item.time}</div><div class="flex-1"><div class="font-semibold dark:text-gray-200">${item.subject}</div>${item.room ? `<div class="text-xs text-gray-500 dark:text-gray-400"><i class="ph-fill ph-map-pin"></i> ${item.room}</div>` : ''}</div><button onclick="deleteScheduleItem(${idx})" class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-2"><i class="ph-bold ph-trash"></i></button>`; l.appendChild(d); }); }
+        function addToSchedule() { const t = document.getElementById('plan-time').value, s = document.getElementById('plan-subject').value, r = document.getElementById('plan-room').value; if (!t || !s) return; const sch = getSchedule(); if (!sch[currentDay]) sch[currentDay] = []; sch[currentDay].push({ time: t, subject: s, room: r }); storage.set('schedule', sch); document.getElementById('plan-subject').value = ''; renderSchedule(); }
+        function deleteScheduleItem(i) { const s = getSchedule(); s[currentDay].splice(i, 1); storage.set('schedule', s); renderSchedule(); }
+        function clearPlanner() { if(confirm("Clear all?")) { storage.set('schedule', {}); renderSchedule(); } }
+
+        function getTasks() { return storage.get('tasks', []); }
+        function renderTasks() { const l = document.getElementById('task-list'), t = getTasks(); l.innerHTML = ''; if (t.length === 0) { l.innerHTML = `<div class="text-center py-8 text-gray-400 dark:text-gray-600"><p class="text-sm">No tasks pending.</p></div>`; return; } t.forEach((task, i) => { const el = document.createElement('div'); el.className = `flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border-l-4 ${task.completed ? 'border-green-500 opacity-60' : 'border-brand-500'}`; el.innerHTML = `<button onclick="toggleTask(${i})" class="text-2xl ${task.completed ? 'text-green-500' : 'text-gray-300 dark:text-gray-600 hover:text-brand-500'}"><i class="ph-fill ${task.completed ? 'ph-check-circle' : 'ph-circle'}"></i></button><span class="flex-1 text-sm ${task.completed ? 'line-through text-gray-400' : 'dark:text-gray-200'}">${task.text}</span><button onclick="deleteTask(${i})" class="text-gray-400 hover:text-red-500 text-lg"><i class="ph-bold ph-x"></i></button>`; l.appendChild(el); }); }
+        function addTask() { const i = document.getElementById('task-input'), t = i.value.trim(); if(!t) return; const tasks = getTasks(); tasks.unshift({ text: t, completed: false }); storage.set('tasks', tasks); i.value = ''; renderTasks(); }
+        function toggleTask(i) { const t = getTasks(); t[i].completed = !t[i].completed; const item = t.splice(i, 1)[0]; t[t[0].completed ? 'push' : 'unshift'](item); storage.set('tasks', t); renderTasks(); }
+        function deleteTask(i) { const t = getTasks(); t.splice(i, 1); storage.set('tasks', t); renderTasks(); }
+
+        // Notes
+        const notepad = document.getElementById('notepad');
+        const saveIndicator = document.getElementById('save-indicator');
+        let noteTimeout;
+        notepad.value = storage.get('notes', '');
+        notepad.addEventListener('input', () => {
+            saveIndicator.classList.add('hidden');
+            clearTimeout(noteTimeout);
+            noteTimeout = setTimeout(() => {
+                storage.set('notes', notepad.value);
+                saveIndicator.classList.remove('hidden');
+                setTimeout(() => saveIndicator.classList.add('hidden'), 2000);
+            }, 1000); 
+        });
+
+        // Init
+        (function init() {
+            setMode('pomodoro');
+            renderStats();
+            renderDaySelector();
+            renderSchedule();
+            renderTasks();
+        })();
+    </script>
+</body>
+</html>
